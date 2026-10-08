@@ -1,28 +1,28 @@
 """schemas note"""
 
-# схема для api(pydantic)
-from datetime import datetime
+from pydantic import BaseModel
 from typing import Optional
-from pydantic import BaseModel, ConfigDict
 
 
 class NoteBase(BaseModel):
     title: str
-    content: str
-    folder: Optional[str] = "General"
+    content: Optional[str] = None
+    folder_id: Optional[int] = None  # Базовая схема заметки
 
 
 class NoteCreate(NoteBase):
-    user_id: int
+    pass  # Схема для создания заметки
+
+
+class NoteUpdate(BaseModel):
+    title: Optional[str] = None
+    content: Optional[str] = None
+    folder_id: Optional[int] = None  # Схема для обновления заметки
 
 
 class NoteResponse(NoteBase):
     id: int
     user_id: int
-    created_at: datetime
-    updated_at: datetime
 
-    model_config = ConfigDict(from_attributes=True)
-
-
-# это "защитная сетка" и валидатор данных API.
+    class Config:
+        from_attributes = True  # Схема для ответа API

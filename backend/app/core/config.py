@@ -14,6 +14,9 @@ class Settings(BaseSettings):
     UPLOAD_DIR: Path = BASE_DIR / "uploads"
     VECTOR_DB_DIR: Path = BASE_DIR / "chroma_db"
     DATABASE_URL: str = f"sqlite+aiosqlite:///{BASE_DIR}/aether.db"
+    SECRET_KEY: str = "SUPER_SECRET_KEY_CHANGE_ME_IN_PRODUCTION"
+    ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7     
 
     WHISPER_MODEL_SIZE: str = "base"
     WHISPER_DEVICE: str = "cpu"
