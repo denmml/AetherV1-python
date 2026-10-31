@@ -1,15 +1,20 @@
 {
-    "python-envs.defaultEnvManager": "ms-python.python:system",
-    "python.analysis.extraPaths": [
-        "./backend",
-        "."
-    ],
-    "python.autoComplete.extraPaths": [
-        "./backend",
-        "."
-    ],
-    "pylint.args": [
-        "--init-hook=import sys; sys.path.append('./backend'); sys.path.append('.')",
-        "--disable=E1102,no-member"
-    ]
+  "python-envs.defaultEnvManager": "ms-python.python:system",
+  "python.analysis.extraPaths": [
+    "${workspaceFolder}/backend"
+  ],
+  "python.autoComplete.extraPaths": [
+    "${workspaceFolder}/backend"
+  ],
+  "python.analysis.packageIndexDepths": [
+    {
+      "name": "app",
+      "depth": 5,
+      "searchDepth": 5
+    }
+  ],
+  "pylint.args": [
+    "--init-hook=import sys, os; sys.path.insert(0, os.path.abspath('backend'))",
+    "--disable=E1102,no-member"
+  ]
 }

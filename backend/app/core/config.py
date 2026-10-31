@@ -16,7 +16,10 @@ class Settings(BaseSettings):
     DATABASE_URL: str = f"sqlite+aiosqlite:///{BASE_DIR}/aether.db"
     SECRET_KEY: str = "SUPER_SECRET_KEY_CHANGE_ME_IN_PRODUCTION"
     ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7     
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7
+
+    # OpenAI API key — set via .env or environment variable OPENAI_API_KEY
+    OPENAI_API_KEY: str = ""
 
     WHISPER_MODEL_SIZE: str = "base"
     WHISPER_DEVICE: str = "cpu"
