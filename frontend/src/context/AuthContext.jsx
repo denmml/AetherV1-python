@@ -1,6 +1,6 @@
 /**
  * AuthContext — глобальное хранилище состояния аутентификации
- * с поддержкой Demo Mode и переключения на локальное хранилище.
+ * с автоматическим переходом в Demo Mode при отсутствии бэкенда.
  */
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import { authAPI, isNetworkError, checkBackendHealth } from '../api'
@@ -9,10 +9,10 @@ import { isDemoMode, setDemoMode, demoAuth } from '../services/demoStore'
 const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
-  const [user, setUser]         = useState(null)
-  const [loading, setLoading]   = useState(true)
-  const [isDemo, setIsDemo]     = useState(isDemoMode())
-  const [backendUp, setBackendUp] = useState(null) // null = unknown, true = live, false = down
+  const [user, setUser]           = useState(null)
+  const [loading, setLoading]     = useState(true)
+  const [isDemo, setIsDemo]       = useState(isDemoMode())
+  const [backendUp, setBackendUp] = useState(null)
 
   // Синхронизация состояния Demo Mode через custom event
   useEffect(() => {
@@ -36,7 +36,7 @@ export function AuthProvider({ children }) {
   // При первом рендере — восстанавливаем сессию
   useEffect(() => {
     const initAuth = async () => {
-      // Если уже находимся в демо-режиме:
+      // 1. Если уже сохранен флаг демо-режима:
       if (isDemoMode()) {
         setIsDemo(true)
         setUser(demoAuth.me())
@@ -45,29 +45,46 @@ export function AuthProvider({ children }) {
         return
       }
 
+      // 2. Если есть сохраненный токен:
       const token = localStorage.getItem('access_token')
-      if (!token) {
-        setLoading(false)
-        refreshBackendStatus()
+      if (token) {
+        try {
+          const res = await authAPI.me()
+          setUser(res.data)
+          setBackendUp(true)
+        } catch (err) {
+          if (isNetworkError(err)) {
+            // Сервер недоступен — переключаем в демо-режим
+            setDemoMode(true)
+            setIsDemo(true)
+            setUser(demoAuth.me())
+            setBackendUp(false)
+          } else {
+            // Ошибка токена (401 и т.д.)
+            localStorage.removeItem('access_token')
+            setUser(null)
+          }
+        } finally {
+          setLoading(false)
+        }
         return
       }
 
+      // 3. Токена нет (новый посетитель, например с телефона на GitHub Pages):
+      // Проверяем доступность бэкенда. Если бэкенд недоступен, автоматически
+      // активируем Demo Mode, чтобы пользователь сразу мог пользоваться приложением!
       try {
-        const res = await authAPI.me()
-        setUser(res.data)
-        setBackendUp(true)
-      } catch (err) {
-        if (isNetworkError(err)) {
-          // Сервер недоступен — переключаем в демо-режим
+        const isUp = await checkBackendHealth()
+        setBackendUp(isUp)
+        if (!isUp) {
           setDemoMode(true)
           setIsDemo(true)
           setUser(demoAuth.me())
-          setBackendUp(false)
-        } else {
-          // Ошибка токена (401 и т.д.)
-          localStorage.removeItem('access_token')
-          setUser(null)
         }
+      } catch {
+        setDemoMode(true)
+        setIsDemo(true)
+        setUser(demoAuth.me())
       } finally {
         setLoading(false)
       }
