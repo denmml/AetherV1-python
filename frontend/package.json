@@ -1,0 +1,39 @@
+{
+  "name": "knowledgeapp-frontend",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build && node -e \"import('fs').then(fs => fs.copyFileSync('dist/index.html', 'dist/404.html'))\"",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@tiptap/extension-blockquote": "^3.32.2",
+    "@tiptap/extension-bullet-list": "^3.32.2",
+    "@tiptap/extension-color": "^3.32.2",
+    "@tiptap/extension-heading": "^3.32.2",
+    "@tiptap/extension-highlight": "^3.32.2",
+    "@tiptap/extension-ordered-list": "^3.32.2",
+    "@tiptap/extension-placeholder": "^3.32.2",
+    "@tiptap/extension-text-style": "^3.32.2",
+    "@tiptap/extension-typography": "^3.32.2",
+    "@tiptap/pm": "^3.32.2",
+    "@tiptap/react": "^3.32.2",
+    "@tiptap/starter-kit": "^3.32.2",
+    "axios": "^1.7.7",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.27.0",
+    "reactflow": "^11.11.4"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.11",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.3",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.47",
+    "tailwindcss": "^3.4.14",
+    "vite": "^5.4.10"
+  }
+}

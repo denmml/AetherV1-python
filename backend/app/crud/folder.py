@@ -7,31 +7,25 @@ from app.models.folder import Folder
 from app.schemas.folder import FolderCreate, FolderUpdate
 
 
-async def create_folder(db: AsyncSession, folder: FolderCreate,
-                        user_id: int) -> Folder:
-    db_folder = Folder(
-        **folder.model_dump(), user_id=user_id
-    )  # Создание папки с явным привязыванием user_id
+async def create_folder(db: AsyncSession, folder: FolderCreate, user_id: int) -> Folder:
+    folder_name = folder.name or folder.title or "Untitled Canvas"
+    db_folder = Folder(name=folder_name, user_id=user_id)
     db.add(db_folder)
-    await db.commit()  # Фиксация записи в БД
-    await db.refresh(db_folder)  # Обновление объекта (получение id,created_at)
+    await db.commit()
+    await db.refresh(db_folder)
     return db_folder
 
 
 async def get_folders_by_user(db: AsyncSession, user_id: int) -> List[Folder]:
-    result = await db.execute(
-        select(Folder).where(Folder.user_id == user_id)
-    )  # Выборка только папок владельца
-    return list(result.scalars().all())  # Приведение к списку сущностей Folder
+    result = await db.execute(select(Folder).where(Folder.user_id == user_id))
+    return list(result.scalars().all())
 
 
 async def get_folder_by_id(
     db: AsyncSession, folder_id: int, user_id: int
 ) -> Optional[Folder]:
     result = await db.execute(
-        select(Folder).where(
-            Folder.id == folder_id, Folder.user_id == user_id
-        )  # Защита от IDOR: фильтр по ID и user_id
+        select(Folder).where(Folder.id == folder_id, Folder.user_id == user_id)
     )
     return result.scalars().first()
 
@@ -39,31 +33,24 @@ async def get_folder_by_id(
 async def update_folder(
     db: AsyncSession, folder_id: int, folder: FolderUpdate, user_id: int
 ) -> Optional[Folder]:
-    db_folder = await get_folder_by_id(
-        db, folder_id, user_id
-    )  # Проверка существования и прав владения
+    db_folder = await get_folder_by_id(db, folder_id, user_id)
     if not db_folder:
         return None
 
-    update_data = folder.model_dump(
-        exclude_unset=True
-    )  # Берём только переданные поля (для частичного обновления)
-    for key, value in update_data.items():
-        setattr(db_folder, key, value)
+    new_name = folder.name or folder.title
+    if new_name is not None:
+        db_folder.name = new_name
 
     await db.commit()
     await db.refresh(db_folder)
     return db_folder
 
 
-async def delete_folder(db: AsyncSession, folder_id: int,
-                        user_id: int) -> bool:
-    db_folder = await get_folder_by_id(
-        db, folder_id, user_id
-    )  # Проверка наличия перед удалением
+async def delete_folder(db: AsyncSession, folder_id: int, user_id: int) -> bool:
+    db_folder = await get_folder_by_id(db, folder_id, user_id)
     if not db_folder:
         return False
 
     await db.delete(db_folder)
-    await db.commit()  # Подтверждение удаления из БД
+    await db.commit()
     return True

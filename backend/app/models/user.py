@@ -1,7 +1,7 @@
 """users.py"""
 
 from datetime import datetime
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING, List, Optional
 from sqlalchemy import String, DateTime, Boolean, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -17,6 +17,7 @@ class User(Base):
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True, default=None)
     email: Mapped[str] = mapped_column(
         String(255), unique=True, index=True, nullable=False
     )

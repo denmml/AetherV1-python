@@ -1,0 +1,46 @@
+# Node / Frontend
+node_modules/
+frontend/node_modules/
+dist/
+frontend/dist/
+.vite/
+frontend/.vite/
+
+# Python / Backend
+venv/
+.venv/
+backend/venv/
+backend/.venv/
+__pycache__/
+*.py[cod]
+*$py.class
+*.pytest_cache/
+
+# Databases
+*.db
+*.sqlite
+*.sqlite3
+aether.db
+backend/aether.db
+knowledge_vault.db
+backend/knowledge_vault.db
+chroma_db/
+backend/chroma_db/
+
+# Uploads & Media
+uploads/
+backend/uploads/
+
+# Environment Variables & Secrets
+.env
+*.env
+backend/.env
+frontend/.env
+frontend/.env.local
+
+# IDEs & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log

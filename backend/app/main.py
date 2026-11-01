@@ -2,7 +2,7 @@
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api.v1.endpoints.api import api_router
+from app.api.v1.api import api_router
 
 # Инициализация основного приложения FastAPI
 app = FastAPI(
