@@ -1,6 +1,6 @@
 /**
  * NoteEditor — Notion-style rich text editor на Tiptap.
- * Полная поддержка светлой и тёмной темы.
+ * Адаптирован под мобильные устройства, планшеты и десктоп.
  */
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
@@ -98,16 +98,13 @@ function ToolbarBtn({ item, editor }) {
       type="button"
       title={item.title}
       onClick={() => item.action(editor)}
-      className={`flex items-center justify-center px-2 py-1 rounded text-[12px]
-                  transition-colors font-medium
+      className={`px-2 py-1.5 min-w-[28px] h-7 rounded text-[11px] font-semibold flex items-center justify-center
+                  transition-colors select-none cursor-pointer
                   ${isActive
-                    ? 'bg-th-accent text-white shadow-sm'
+                    ? 'bg-th-accent text-white'
                     : 'text-th-muted hover:bg-th-hover hover:text-th-text'}`}
-      style={{ minWidth: 28, height: 28 }}
     >
-      {item.text
-        ? item.label
-        : <Ico d={item.icon} />}
+      {item.text ? item.label : <Ico d={item.icon} size={13} />}
     </button>
   )
 }
@@ -153,11 +150,11 @@ export default function NoteEditor({ content = '', onChange, placeholder = 'Star
 
   return (
     <div className="flex flex-col h-full bg-th-bg text-th-text">
-      {/* Toolbar */}
-      <div className="flex items-center gap-0.5 flex-wrap px-12 py-2
-                      border-b border-th-border bg-th-bg sticky top-0 z-10">
+      {/* Toolbar с горизонтальной прокруткой на мобильных */}
+      <div className="flex items-center gap-0.5 flex-nowrap sm:flex-wrap px-3 sm:px-8 md:px-12 py-1.5 sm:py-2
+                      border-b border-th-border bg-th-bg sticky top-0 z-10 overflow-x-auto">
         {TOOLBAR_GROUPS.map((group, gi) => (
-          <span key={gi} className="flex items-center gap-0.5">
+          <span key={gi} className="flex items-center gap-0.5 shrink-0">
             {gi > 0 && (
               <span className="w-px h-4 bg-th-border mx-1" />
             )}
@@ -168,8 +165,8 @@ export default function NoteEditor({ content = '', onChange, placeholder = 'Star
         ))}
       </div>
 
-      {/* Editor area */}
-      <div className="flex-1 overflow-y-auto px-12 py-8 bg-th-bg">
+      {/* Editor area с адаптивными отступами */}
+      <div className="flex-1 overflow-y-auto px-4 sm:px-8 md:px-12 py-5 sm:py-8 bg-th-bg">
         <EditorContent editor={editor} />
       </div>
     </div>

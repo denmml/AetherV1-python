@@ -199,10 +199,10 @@ export default function Recorder() {
     <div className="flex flex-col h-full overflow-y-auto bg-th-bg text-th-text">
       <CoverHeader seed={3} title="Transcription" subtitle="Record audio or upload a file to transcribe via Whisper" />
 
-      <div className="px-12 py-6 max-w-3xl w-full mx-auto space-y-6">
+      <div className="px-3.5 sm:px-6 md:px-12 py-4 sm:py-6 max-w-3xl w-full mx-auto space-y-4 sm:space-y-6">
 
         {/* ── Record panel ─────────────────────────────────────────── */}
-        <div className="border border-th-border rounded-xl p-6 bg-th-card shadow-sm">
+        <div className="border border-th-border rounded-xl p-4 sm:p-6 bg-th-card shadow-sm">
           <h2 className="text-[13px] font-semibold text-th-muted uppercase tracking-wide mb-4">
             New recording
           </h2>

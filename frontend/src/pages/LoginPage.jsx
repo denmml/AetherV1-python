@@ -83,7 +83,7 @@ export default function LoginPage() {
       </div>
 
       {/* Right — form */}
-      <div className="flex-1 flex items-center justify-center p-8 bg-th-bg">
+      <div className="flex-1 flex items-center justify-center p-4 sm:p-8 bg-th-bg">
         <div className="w-full max-w-sm">
           <h1 className="text-[1.7rem] font-bold text-th-text mb-1 tracking-tight">
             {mode === 'login' ? 'Welcome back' : 'Create account'}

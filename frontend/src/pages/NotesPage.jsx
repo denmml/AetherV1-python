@@ -1,6 +1,6 @@
 /**
  * NotesPage — страница «Конспекты» в стиле Notion.
- * Полная поддержка светлой и тёмно-оранжевой тем.
+ * Полная адаптивность под мобильные телефоны, планшеты и десктопы.
  */
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { notesAPI } from '../api'
@@ -34,6 +34,12 @@ const IconDoc = () => (
     <polyline points="14 2 14 8 20 8"/>
   </svg>
 )
+const IconBack = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+       stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="15 18 9 12 15 6" />
+  </svg>
+)
 
 function fmtDate(iso) {
   if (!iso) return ''
@@ -48,7 +54,7 @@ function NoteItem({ note, active, onSelect, onDelete }) {
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
       onClick={() => onSelect(note)}
-      className={`group flex items-center justify-between px-3 py-1.5 rounded cursor-pointer
+      className={`group flex items-center justify-between px-3 py-2 md:py-1.5 rounded-lg cursor-pointer
                   transition-colors select-none text-[13px]
                   ${active
                     ? 'bg-th-hover text-th-text font-medium'
@@ -58,25 +64,24 @@ function NoteItem({ note, active, onSelect, onDelete }) {
         <span className={active ? 'text-th-accent' : 'opacity-70'}><IconDoc /></span>
         <span className="truncate">{note.title || 'Untitled'}</span>
       </span>
-      {(hover || active) && (
-        <button
-          onClick={(e) => { e.stopPropagation(); onDelete(note.id) }}
-          className="shrink-0 ml-1 p-0.5 rounded hover:text-th-danger text-th-muted transition-colors"
-          title="Delete"
-        >
-          <IconTrash />
-        </button>
-      )}
+      <button
+        onClick={(e) => { e.stopPropagation(); onDelete(note.id) }}
+        className="shrink-0 ml-1 p-1 rounded hover:text-th-danger text-th-muted transition-colors opacity-70 hover:opacity-100"
+        title="Delete"
+      >
+        <IconTrash />
+      </button>
     </div>
   )
 }
 
 export default function NotesPage() {
-  const [notes,       setNotes]       = useState([])
-  const [activeNote,  setActiveNote]  = useState(null)
-  const [query,       setQuery]       = useState('')
-  const [loading,     setLoading]     = useState(true)
-  const [saveLabel,   setSaveLabel]   = useState('')
+  const [notes,           setNotes]           = useState([])
+  const [activeNote,      setActiveNote]      = useState(null)
+  const [query,           setQuery]           = useState('')
+  const [loading,         setLoading]         = useState(true)
+  const [saveLabel,       setSaveLabel]       = useState('')
+  const [mobileShowList,  setMobileShowList]  = useState(false)
 
   const titleRef    = useRef(null)
   const savingTimer = useRef(null)
@@ -104,6 +109,7 @@ export default function NotesPage() {
       const note = res.data
       setNotes((prev) => [note, ...prev])
       setActiveNote(note)
+      setMobileShowList(false)
       window.dispatchEvent(new CustomEvent('aether:notes-changed'))
       setTimeout(() => titleRef.current?.focus(), 80)
     } catch { /* silent */ }
@@ -160,12 +166,20 @@ export default function NotesPage() {
       )
     : notes
 
+  const handleSelectNote = (note) => {
+    setActiveNote(note)
+    setMobileShowList(false)
+  }
+
   return (
-    <div className="flex h-full bg-th-bg text-th-text overflow-hidden">
-      {/* ── Left sidebar ─────────────────────────────────────────────── */}
-      <aside className="w-56 shrink-0 flex flex-col bg-th-sidebar border-r border-th-border">
+    <div className="flex h-full bg-th-bg text-th-text overflow-hidden relative">
+      {/* ── Left sidebar (список заметок) ─────────────────────────────── */}
+      <aside
+        className={`shrink-0 flex flex-col bg-th-sidebar border-r border-th-border transition-all
+          ${mobileShowList ? 'w-full flex' : 'hidden md:flex md:w-60 lg:w-64'}`}
+      >
         {/* Header */}
-        <div className="px-3 py-3 border-b border-th-border">
+        <div className="px-3.5 py-3 border-b border-th-border">
           <div className="flex items-center justify-between mb-2">
             <span className="text-[12px] font-semibold text-th-muted uppercase tracking-wide">
               Notes
@@ -173,7 +187,7 @@ export default function NotesPage() {
             <button
               onClick={handleCreate}
               title="New note"
-              className="p-1 rounded hover:bg-th-hover text-th-muted hover:text-th-accent transition-colors"
+              className="p-1.5 rounded-lg hover:bg-th-hover text-th-muted hover:text-th-accent transition-colors"
             >
               <IconPlus />
             </button>
@@ -212,17 +226,17 @@ export default function NotesPage() {
               key={note.id}
               note={note}
               active={activeNote?.id === note.id}
-              onSelect={setActiveNote}
+              onSelect={handleSelectNote}
               onDelete={handleDelete}
             />
           ))}
         </div>
 
         {/* Footer */}
-        <div className="px-3 py-2.5 border-t border-th-border">
+        <div className="px-3.5 py-2.5 border-t border-th-border">
           <button
             onClick={handleCreate}
-            className="flex items-center gap-2 text-[12px] text-th-muted hover:text-th-text transition-colors w-full py-1 font-medium"
+            className="flex items-center justify-center gap-2 text-[12px] font-medium text-th-accent bg-th-accent/10 hover:bg-th-accent/20 border border-th-accent/30 rounded-lg w-full py-2 transition-colors cursor-pointer"
           >
             <IconPlus />
             New page
@@ -230,14 +244,34 @@ export default function NotesPage() {
         </div>
       </aside>
 
-      {/* ── Editor area ──────────────────────────────────────────────── */}
-      <div className="flex-1 flex flex-col overflow-hidden bg-th-bg text-th-text">
+      {/* ── Editor area (редактор заметки) ──────────────────────────────── */}
+      <div
+        className={`flex-1 flex flex-col overflow-hidden bg-th-bg text-th-text min-w-0
+          ${mobileShowList ? 'hidden md:flex' : 'flex'}`}
+      >
         {activeNote ? (
           <>
+            {/* Мобильная верхняя плашка возврата к списку */}
+            <div className="md:hidden flex items-center justify-between px-3 py-2 border-b border-th-border bg-th-sidebar shrink-0">
+              <button
+                onClick={() => setMobileShowList(true)}
+                className="flex items-center gap-1.5 text-[12px] font-medium text-th-accent hover:underline cursor-pointer"
+              >
+                <IconBack />
+                <span>All Notes</span>
+              </button>
+              <button
+                onClick={handleCreate}
+                className="flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold bg-th-accent text-white rounded-lg shadow-sm"
+              >
+                <IconPlus /> New
+              </button>
+            </div>
+
             <CoverHeader seed={activeNote.id} />
 
             {/* Save status */}
-            <div className="flex justify-end px-12 pt-2">
+            <div className="flex justify-end px-4 sm:px-8 md:px-12 pt-1.5 shrink-0">
               <span className={`text-[11px] transition-opacity
                 ${saveLabel ? 'opacity-100' : 'opacity-0'}
                 ${saveLabel === 'Error saving' ? 'text-th-danger' : 'text-th-muted'}`}>
@@ -246,7 +280,7 @@ export default function NotesPage() {
             </div>
 
             {/* Editable title */}
-            <div className="px-12 pb-1">
+            <div className="px-4 sm:px-8 md:px-12 pb-2 shrink-0">
               <input
                 ref={titleRef}
                 type="text"
@@ -255,7 +289,7 @@ export default function NotesPage() {
                 onBlur={handleTitleBlur}
                 onKeyDown={handleTitleKeyDown}
                 placeholder="Untitled"
-                className="w-full text-[2rem] font-bold text-th-text
+                className="w-full text-xl sm:text-2xl md:text-[2rem] font-bold text-th-text
                            outline-none bg-transparent placeholder:text-th-muted/40
                            border-none tracking-tight leading-tight"
               />
@@ -275,7 +309,7 @@ export default function NotesPage() {
             </div>
           </>
         ) : (
-          <div className="flex-1 flex flex-col items-center justify-center text-th-muted">
+          <div className="flex-1 flex flex-col items-center justify-center text-th-muted p-4">
             <svg width="40" height="40" viewBox="0 0 24 24" fill="none"
                  stroke="currentColor" strokeWidth="1.2" className="mb-4 opacity-40">
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
@@ -286,8 +320,8 @@ export default function NotesPage() {
             <p className="text-sm">Select or create a note</p>
             <button
               onClick={handleCreate}
-              className="mt-3 px-4 py-1.5 text-sm font-medium bg-th-accent text-white
-                         rounded-lg hover:bg-th-accentH transition-colors shadow-sm"
+              className="mt-3 px-4 py-2 text-sm font-medium bg-th-accent text-white
+                         rounded-lg hover:bg-th-accentH transition-colors shadow-sm cursor-pointer"
             >
               New page
             </button>

@@ -1,5 +1,5 @@
 /**
- * CoverHeader — эстетичная обложка страницы в стиле Zen Browser.
+ * CoverHeader — эстетичная адаптивная обложка страницы в стиле Zen Browser.
  * Использует публичные шедевры живописи.
  */
 
@@ -12,17 +12,18 @@ const COVERS = [
 ]
 
 export function getCoverForPage(seed = 0) {
-  return COVERS[seed % COVERS.length]
+  const num = typeof seed === 'number' ? seed : String(seed).split('').reduce((acc, c) => acc + c.charCodeAt(0), 0)
+  return COVERS[Math.abs(num) % COVERS.length]
 }
 
 export default function CoverHeader({ seed = 0, title = '', subtitle = '' }) {
   const url = getCoverForPage(seed)
 
   return (
-    <div className="w-full bg-th-bg text-th-text">
+    <div className="w-full bg-th-bg text-th-text shrink-0">
       {/* Картина */}
       <div
-        className="w-full h-44 bg-center bg-cover relative overflow-hidden"
+        className="w-full h-28 sm:h-36 md:h-44 bg-center bg-cover relative overflow-hidden transition-all"
         style={{ backgroundImage: `url(${url})` }}
       >
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/10 to-black/40" />
@@ -30,14 +31,14 @@ export default function CoverHeader({ seed = 0, title = '', subtitle = '' }) {
 
       {/* Заголовок под обложкой */}
       {(title || subtitle) && (
-        <div className="px-12 pt-6 pb-2">
+        <div className="px-4 sm:px-8 md:px-12 pt-4 sm:pt-6 pb-2">
           {title && (
-            <h1 className="text-3xl font-bold text-th-text tracking-tight leading-tight">
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-th-text tracking-tight leading-tight">
               {title}
             </h1>
           )}
           {subtitle && (
-            <p className="mt-1 text-sm text-th-muted">{subtitle}</p>
+            <p className="mt-1 text-xs sm:text-sm text-th-muted">{subtitle}</p>
           )}
         </div>
       )}

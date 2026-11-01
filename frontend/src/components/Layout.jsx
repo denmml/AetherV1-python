@@ -1,14 +1,9 @@
 /**
- * Layout — главная компоновка приложения с боковой панелью.
- * Включает:
- * - Имя пользователя (username)
- * - Индикатор режима (Live API / Demo Mode)
- * - Навигацию
- * - Блок быстрых заметок (Recent Pages)
- * - Переключатель светлой и тёмной темы с анимацией
+ * Layout — адаптивная компоновка приложения с боковой панелью
+ * и поддержкой мобильных устройств (смартфоны, планшеты, десктоп).
  */
 import { useState, useEffect } from 'react'
-import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth }  from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
 import { notesAPI, checkBackendHealth } from '../api'
@@ -57,6 +52,21 @@ const IconDoc = () => (
     <polyline points="14 2 14 8 20 8"/>
   </svg>
 )
+const IconMenu = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+       stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="3" y1="12" x2="21" y2="12"/>
+    <line x1="3" y1="6"  x2="21" y2="6"/>
+    <line x1="3" y1="18" x2="21" y2="18"/>
+  </svg>
+)
+const IconClose = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+       stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="18" y1="6"  x2="6"  y2="18"/>
+    <line x1="6"  y1="6"  x2="18" y2="18"/>
+  </svg>
+)
 
 function ThemeIcon({ dark }) {
   return dark ? (
@@ -90,17 +100,22 @@ export default function Layout() {
   const { user, logout, isDemo, exitDemoMode } = useAuth()
   const { dark, toggle }    = useTheme()
   const navigate            = useNavigate()
+  const location            = useLocation()
 
-  const [pulse, setPulse]               = useState(false)
-  const [recentNotes, setRecentNotes]   = useState([])
-  const [checkingBackend, setChecking]  = useState(false)
-  const [toastMessage, setToastMessage] = useState('')
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [pulse, setPulse]                   = useState(false)
+  const [recentNotes, setRecentNotes]       = useState([])
+  const [checkingBackend, setChecking]      = useState(false)
+  const [toastMessage, setToastMessage]     = useState('')
 
-  // Имя пользователя для отображения
+  // Закрывать мобильное меню при переходе по роутам
+  useEffect(() => {
+    setMobileMenuOpen(false)
+  }, [location.pathname])
+
   const displayName = user?.name?.trim() || (user?.email ? user.email.split('@')[0] : 'User')
 
   useEffect(() => {
-    // Подгрузка недавних заметок
     const loadSidebarData = async () => {
       try {
         const res = await notesAPI.list()
@@ -140,166 +155,232 @@ export default function Layout() {
     }
   }
 
-  return (
-    <div className="flex h-screen overflow-hidden bg-th-bg text-th-text">
-      {/* ── Левый сайдбар ────────────────────────────────────────────── */}
-      <aside
-        className="w-56 shrink-0 flex flex-col border-r select-none bg-th-sidebar border-th-border"
-      >
-        {/* Header профиля */}
-        <div className="p-3.5 border-b border-th-border">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs bg-th-accent text-white shadow-sm shrink-0">
-              {displayName[0]?.toUpperCase()}
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-[13px] font-bold tracking-tight text-th-text truncate leading-tight">
-                Aether PKM
-              </p>
-              <p className="text-[11px] font-medium text-th-accent truncate mt-0.5" title={displayName}>
-                {displayName}
-              </p>
-            </div>
+  // Общий контент сайдбара
+  const sidebarContent = (
+    <div className="flex flex-col h-full select-none">
+      {/* Header профиля */}
+      <div className="p-3.5 border-b border-th-border flex items-center justify-between">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs bg-th-accent text-white shadow-sm shrink-0">
+            {displayName[0]?.toUpperCase()}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-[13px] font-bold tracking-tight text-th-text truncate leading-tight">
+              Aether PKM
+            </p>
+            <p className="text-[11px] font-medium text-th-accent truncate mt-0.5" title={displayName}>
+              {displayName}
+            </p>
           </div>
         </div>
 
-        {/* Индикатор статуса соединения / режима */}
-        <div className="px-3.5 py-1.5 border-b border-th-border bg-th-bg/40 flex items-center justify-between text-[11px]">
-          <div className="flex items-center gap-1.5 min-w-0">
-            <span
-              className={`w-2 h-2 rounded-full shrink-0 ${
-                isDemo ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500'
-              }`}
-            />
-            <span className="truncate font-medium text-th-muted">
-              {isDemo ? 'Demo Mode (Offline)' : 'Live API'}
-            </span>
-          </div>
-          {isDemo && (
-            <button
-              onClick={handleReconnect}
-              disabled={checkingBackend}
-              className="text-[10px] px-1.5 py-0.5 rounded text-th-accent hover:bg-th-hover transition-colors font-semibold shrink-0 cursor-pointer"
-              title="Check if backend server is available"
-            >
-              {checkingBackend ? '...' : 'Check'}
-            </button>
+        {/* Кнопка закрытия только на мобильных */}
+        <button
+          onClick={() => setMobileMenuOpen(false)}
+          className="md:hidden p-1.5 rounded-lg text-th-muted hover:text-th-text hover:bg-th-hover transition-colors"
+          title="Close menu"
+        >
+          <IconClose />
+        </button>
+      </div>
+
+      {/* Индикатор статуса соединения / режима */}
+      <div className="px-3.5 py-1.5 border-b border-th-border bg-th-bg/40 flex items-center justify-between text-[11px]">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <span
+            className={`w-2 h-2 rounded-full shrink-0 ${
+              isDemo ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500'
+            }`}
+          />
+          <span className="truncate font-medium text-th-muted">
+            {isDemo ? 'Demo Mode (Offline)' : 'Live API'}
+          </span>
+        </div>
+        {isDemo && (
+          <button
+            onClick={handleReconnect}
+            disabled={checkingBackend}
+            className="text-[10px] px-1.5 py-0.5 rounded text-th-accent hover:bg-th-hover transition-colors font-semibold shrink-0 cursor-pointer"
+            title="Check if backend server is available"
+          >
+            {checkingBackend ? '...' : 'Check'}
+          </button>
+        )}
+      </div>
+
+      {/* Основная навигация */}
+      <div className="px-2 py-3 space-y-0.5">
+        {NAV.map(({ to, end, Icon, label }) => (
+          <NavLink
+            key={to}
+            to={to}
+            end={end}
+            onClick={() => setMobileMenuOpen(false)}
+            className={({ isActive }) =>
+              `flex items-center gap-2.5 px-2.5 py-2 md:py-1.5 rounded-lg text-[13px] transition-colors
+               ${isActive
+                 ? 'bg-th-hover text-th-text font-semibold'
+                 : 'text-th-muted hover:bg-th-hover hover:text-th-text'}`
+            }
+          >
+            {({ isActive }) => (
+              <>
+                <span className={isActive ? 'text-th-accent' : 'opacity-70'}><Icon /></span>
+                <span className="flex-1 truncate">{label}</span>
+                {isActive && dark && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-th-accent" />
+                )}
+              </>
+            )}
+          </NavLink>
+        ))}
+      </div>
+
+      {/* ── Раздел: Недавние заметки ─────────────────────────────── */}
+      <div className="px-3 pt-3 pb-2 flex-1 overflow-y-auto">
+        <p className="text-[10px] font-bold uppercase tracking-wider text-th-muted mb-2 px-1 opacity-70">
+          Recent Pages
+        </p>
+
+        <div className="space-y-0.5">
+          {recentNotes.length === 0 ? (
+            <p className="text-[11px] text-th-muted px-1 py-1 italic opacity-60">
+              No pages yet
+            </p>
+          ) : (
+            recentNotes.map((note) => (
+              <button
+                key={note.id}
+                onClick={() => {
+                  setMobileMenuOpen(false)
+                  navigate('/notes')
+                }}
+                className="flex items-center gap-2 w-full px-2 py-1.5 rounded text-left text-[12px] text-th-muted hover:text-th-text hover:bg-th-hover transition-colors group cursor-pointer"
+              >
+                <span className="opacity-50 group-hover:opacity-100 group-hover:text-th-accent transition-opacity">
+                  <IconDoc />
+                </span>
+                <span className="truncate">{note.title || 'Untitled'}</span>
+              </button>
+            ))
           )}
         </div>
+      </div>
 
-        {/* Основная навигация */}
-        <div className="px-2 py-3 space-y-0.5">
-          {NAV.map(({ to, end, Icon, label }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={end}
-              className={({ isActive }) =>
-                `flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-[13px] transition-colors
-                 ${isActive
-                   ? 'bg-th-hover text-th-text font-semibold'
-                   : 'text-th-muted hover:bg-th-hover hover:text-th-text'}`
-              }
-            >
-              {({ isActive }) => (
-                <>
-                  <span className={isActive ? 'text-th-accent' : 'opacity-70'}><Icon /></span>
-                  <span className="flex-1 truncate">{label}</span>
-                  {isActive && dark && (
-                    <span className="w-1.5 h-1.5 rounded-full bg-th-accent" />
-                  )}
-                </>
-              )}
-            </NavLink>
-          ))}
+      {/* Нижний блок: Переключатель темы + Выход */}
+      <div className="p-3 border-t border-th-border space-y-1">
+        {/* Theme toggle */}
+        <button
+          onClick={handleThemeToggle}
+          className={`flex items-center gap-2.5 w-full px-2.5 py-1.5 rounded-lg text-[12px] font-medium transition-all cursor-pointer ${pulse ? 'theme-toggle-active' : ''}`}
+          style={{
+            background: dark ? 'rgba(249,115,22,.12)' : 'var(--th-hover)',
+            color: dark ? 'var(--th-accent)' : 'var(--th-muted)',
+            border: dark ? '1px solid rgba(249,115,22,.25)' : '1px solid var(--th-border)',
+          }}
+        >
+          <ThemeIcon dark={dark} />
+          <span>{dark ? 'Dark Mode' : 'Light Mode'}</span>
+          <span
+            className="ml-auto w-7 h-4 rounded-full relative"
+            style={{ background: dark ? 'var(--th-accent)' : 'var(--th-border)' }}
+          >
+            <span
+              className="absolute top-0.5 w-3 h-3 rounded-full bg-white"
+              style={{
+                left: dark ? '14px' : '2px',
+                transition: 'left 0.25s cubic-bezier(.4,0,.2,1)',
+                boxShadow: '0 1px 3px rgba(0,0,0,.3)',
+              }}
+            />
+          </span>
+        </button>
+
+        {/* Logout */}
+        <button
+          onClick={logout}
+          className="flex items-center gap-2 w-full px-2.5 py-1.5 rounded-lg text-[12px] text-th-muted hover:text-th-danger hover:bg-th-hover transition-colors cursor-pointer"
+        >
+          <IconLogout />
+          <span>Sign out</span>
+        </button>
+      </div>
+    </div>
+  )
+
+  return (
+    <div className="flex flex-col md:flex-row h-screen overflow-hidden bg-th-bg text-th-text">
+      {/* ── Мобильный верхний бар (виден только на экранах < 768px) ── */}
+      <header className="md:hidden flex items-center justify-between px-3.5 py-2.5 border-b border-th-border bg-th-sidebar shrink-0 z-30">
+        <div className="flex items-center gap-2.5">
+          <button
+            onClick={() => setMobileMenuOpen(true)}
+            className="p-1.5 rounded-lg text-th-muted hover:text-th-text hover:bg-th-hover transition-colors"
+            title="Open menu"
+            aria-label="Open menu"
+          >
+            <IconMenu />
+          </button>
+          <span className="font-bold text-[14px] tracking-tight text-th-text">
+            Aether PKM
+          </span>
         </div>
 
-        {/* ── Раздел: Недавние заметки ─────────────────────────────── */}
-        <div className="px-3 pt-3 pb-2 flex-1 overflow-y-auto">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-th-muted mb-2 px-1 opacity-70">
-            Recent Pages
-          </p>
-
-          <div className="space-y-0.5">
-            {recentNotes.length === 0 ? (
-              <p className="text-[11px] text-th-muted px-1 py-1 italic opacity-60">
-                No pages yet
-              </p>
-            ) : (
-              recentNotes.map((note) => (
-                <button
-                  key={note.id}
-                  onClick={() => navigate('/notes')}
-                  className="flex items-center gap-2 w-full px-2 py-1.5 rounded text-left text-[12px] text-th-muted hover:text-th-text hover:bg-th-hover transition-colors group cursor-pointer"
-                >
-                  <span className="opacity-50 group-hover:opacity-100 group-hover:text-th-accent transition-opacity">
-                    <IconDoc />
-                  </span>
-                  <span className="truncate">{note.title || 'Untitled'}</span>
-                </button>
-              ))
-            )}
-          </div>
-        </div>
-
-        {/* Нижний блок: Переключатель темы + Выход */}
-        <div className="p-3 border-t border-th-border space-y-1">
-          {/* Theme toggle */}
+        <div className="flex items-center gap-2">
+          {isDemo && (
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/15 text-amber-500 border border-amber-500/30">
+              Demo
+            </span>
+          )}
           <button
             onClick={handleThemeToggle}
-            className={`flex items-center gap-2.5 w-full px-2.5 py-1.5 rounded-lg text-[12px] font-medium transition-all cursor-pointer ${pulse ? 'theme-toggle-active' : ''}`}
-            style={{
-              background: dark ? 'rgba(249,115,22,.12)' : 'var(--th-hover)',
-              color: dark ? 'var(--th-accent)' : 'var(--th-muted)',
-              border: dark ? '1px solid rgba(249,115,22,.25)' : '1px solid var(--th-border)',
-            }}
+            className="p-1.5 rounded-lg text-th-muted hover:text-th-text hover:bg-th-hover transition-colors"
+            title="Toggle theme"
           >
             <ThemeIcon dark={dark} />
-            <span>{dark ? 'Dark Mode' : 'Light Mode'}</span>
-            <span
-              className="ml-auto w-7 h-4 rounded-full relative"
-              style={{ background: dark ? 'var(--th-accent)' : 'var(--th-border)' }}
-            >
-              <span
-                className="absolute top-0.5 w-3 h-3 rounded-full bg-white"
-                style={{
-                  left: dark ? '14px' : '2px',
-                  transition: 'left 0.25s cubic-bezier(.4,0,.2,1)',
-                  boxShadow: '0 1px 3px rgba(0,0,0,.3)',
-                }}
-              />
-            </span>
-          </button>
-
-          {/* Logout */}
-          <button
-            onClick={logout}
-            className="flex items-center gap-2 w-full px-2.5 py-1.5 rounded-lg text-[12px] text-th-muted hover:text-th-danger hover:bg-th-hover transition-colors cursor-pointer"
-          >
-            <IconLogout />
-            <span>Sign out</span>
           </button>
         </div>
+      </header>
+
+      {/* ── Десктопный постоянный сайдбар (md:flex) ── */}
+      <aside className="hidden md:flex md:w-56 lg:w-60 shrink-0 flex-col border-r bg-th-sidebar border-th-border">
+        {sidebarContent}
       </aside>
 
+      {/* ── Мобильный выезжающий сайдбар (Drawer + Backdrop) ── */}
+      {mobileMenuOpen && (
+        <div className="md:hidden fixed inset-0 z-50 flex">
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+
+          {/* Drawer panel */}
+          <div className="relative w-64 max-w-[80vw] h-full bg-th-sidebar border-r border-th-border shadow-2xl z-10 flex flex-col animate-slide-right">
+            {sidebarContent}
+          </div>
+        </div>
+      )}
+
       {/* ── Основная рабочая зона ────────────────────────────────────── */}
-      <main className="flex-1 flex flex-col overflow-hidden bg-th-bg text-th-text relative">
+      <main className="flex-1 flex flex-col overflow-hidden bg-th-bg text-th-text relative min-w-0">
         {/* Верхний баннер при Demo Mode */}
         {isDemo && (
-          <div className="shrink-0 px-4 py-1.5 bg-amber-500/10 border-b border-amber-500/20 flex items-center justify-between text-[12px] text-amber-600 dark:text-amber-400 select-none">
-            <div className="flex items-center gap-2 min-w-0 truncate">
+          <div className="shrink-0 px-3 sm:px-4 py-1.5 bg-amber-500/10 border-b border-amber-500/20 flex flex-wrap items-center justify-between gap-1 text-[11px] sm:text-[12px] text-amber-600 dark:text-amber-400 select-none">
+            <div className="flex items-center gap-2 min-w-0">
               <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shrink-0" />
               <span className="truncate">
-                <strong>Demo Mode Active:</strong> Backend is offline. All data is saved in your browser (localStorage).
+                <strong>Demo Mode:</strong> Backend offline. Data saved in localStorage.
               </span>
             </div>
-            <div className="flex items-center gap-2 shrink-0 ml-3">
+            <div className="flex items-center gap-2 shrink-0 ml-auto">
               <button
                 onClick={handleReconnect}
                 disabled={checkingBackend}
-                className="px-2.5 py-0.5 rounded bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-[11px] font-semibold transition-colors cursor-pointer"
+                className="px-2 py-0.5 rounded bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-[10px] sm:text-[11px] font-semibold transition-colors cursor-pointer"
               >
-                {checkingBackend ? 'Checking…' : 'Reconnect to Live API'}
+                {checkingBackend ? 'Checking…' : 'Reconnect'}
               </button>
             </div>
           </div>
