@@ -2,6 +2,7 @@
  * Layout — главная компоновка приложения с боковой панелью.
  * Включает:
  * - Имя пользователя (username)
+ * - Индикатор режима (Live API / Demo Mode)
  * - Навигацию
  * - Блок быстрых заметок (Recent Pages)
  * - Переключатель светлой и тёмной темы с анимацией
@@ -10,7 +11,7 @@ import { useState, useEffect } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useAuth }  from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
-import { notesAPI } from '../api'
+import { notesAPI, checkBackendHealth } from '../api'
 
 /* ── SVG иконки ──────────────────────────────────────────────────────────── */
 const IconGraph = () => (
@@ -86,12 +87,14 @@ const NAV = [
 ]
 
 export default function Layout() {
-  const { user, logout }    = useAuth()
+  const { user, logout, isDemo, exitDemoMode } = useAuth()
   const { dark, toggle }    = useTheme()
   const navigate            = useNavigate()
 
-  const [pulse, setPulse]   = useState(false)
-  const [recentNotes, setRecentNotes] = useState([])
+  const [pulse, setPulse]               = useState(false)
+  const [recentNotes, setRecentNotes]   = useState([])
+  const [checkingBackend, setChecking]  = useState(false)
+  const [toastMessage, setToastMessage] = useState('')
 
   // Имя пользователя для отображения
   const displayName = user?.name?.trim() || (user?.email ? user.email.split('@')[0] : 'User')
@@ -107,12 +110,34 @@ export default function Layout() {
     }
 
     loadSidebarData()
-  }, [])
+
+    const onNoteSaved = () => loadSidebarData()
+    window.addEventListener('aether:notes-changed', onNoteSaved)
+    window.addEventListener('aether:demo-mode', onNoteSaved)
+    return () => {
+      window.removeEventListener('aether:notes-changed', onNoteSaved)
+      window.removeEventListener('aether:demo-mode', onNoteSaved)
+    }
+  }, [isDemo])
 
   const handleThemeToggle = () => {
     toggle()
     setPulse(true)
     setTimeout(() => setPulse(false), 600)
+  }
+
+  const handleReconnect = async () => {
+    setChecking(true)
+    const alive = await checkBackendHealth()
+    setChecking(false)
+
+    if (alive) {
+      await exitDemoMode()
+      window.location.reload()
+    } else {
+      setToastMessage('Backend is still unreachable. Continuing in Demo Mode.')
+      setTimeout(() => setToastMessage(''), 3500)
+    }
   }
 
   return (
@@ -136,6 +161,30 @@ export default function Layout() {
               </p>
             </div>
           </div>
+        </div>
+
+        {/* Индикатор статуса соединения / режима */}
+        <div className="px-3.5 py-1.5 border-b border-th-border bg-th-bg/40 flex items-center justify-between text-[11px]">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span
+              className={`w-2 h-2 rounded-full shrink-0 ${
+                isDemo ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500'
+              }`}
+            />
+            <span className="truncate font-medium text-th-muted">
+              {isDemo ? 'Demo Mode (Offline)' : 'Live API'}
+            </span>
+          </div>
+          {isDemo && (
+            <button
+              onClick={handleReconnect}
+              disabled={checkingBackend}
+              className="text-[10px] px-1.5 py-0.5 rounded text-th-accent hover:bg-th-hover transition-colors font-semibold shrink-0 cursor-pointer"
+              title="Check if backend server is available"
+            >
+              {checkingBackend ? '...' : 'Check'}
+            </button>
+          )}
         </div>
 
         {/* Основная навигация */}
@@ -181,7 +230,7 @@ export default function Layout() {
                 <button
                   key={note.id}
                   onClick={() => navigate('/notes')}
-                  className="flex items-center gap-2 w-full px-2 py-1.5 rounded text-left text-[12px] text-th-muted hover:text-th-text hover:bg-th-hover transition-colors group"
+                  className="flex items-center gap-2 w-full px-2 py-1.5 rounded text-left text-[12px] text-th-muted hover:text-th-text hover:bg-th-hover transition-colors group cursor-pointer"
                 >
                   <span className="opacity-50 group-hover:opacity-100 group-hover:text-th-accent transition-opacity">
                     <IconDoc />
@@ -198,7 +247,7 @@ export default function Layout() {
           {/* Theme toggle */}
           <button
             onClick={handleThemeToggle}
-            className={`flex items-center gap-2.5 w-full px-2.5 py-1.5 rounded-lg text-[12px] font-medium transition-all ${pulse ? 'theme-toggle-active' : ''}`}
+            className={`flex items-center gap-2.5 w-full px-2.5 py-1.5 rounded-lg text-[12px] font-medium transition-all cursor-pointer ${pulse ? 'theme-toggle-active' : ''}`}
             style={{
               background: dark ? 'rgba(249,115,22,.12)' : 'var(--th-hover)',
               color: dark ? 'var(--th-accent)' : 'var(--th-muted)',
@@ -225,7 +274,7 @@ export default function Layout() {
           {/* Logout */}
           <button
             onClick={logout}
-            className="flex items-center gap-2 w-full px-2.5 py-1.5 rounded-lg text-[12px] text-th-muted hover:text-th-danger hover:bg-th-hover transition-colors"
+            className="flex items-center gap-2 w-full px-2.5 py-1.5 rounded-lg text-[12px] text-th-muted hover:text-th-danger hover:bg-th-hover transition-colors cursor-pointer"
           >
             <IconLogout />
             <span>Sign out</span>
@@ -234,7 +283,35 @@ export default function Layout() {
       </aside>
 
       {/* ── Основная рабочая зона ────────────────────────────────────── */}
-      <main className="flex-1 flex flex-col overflow-hidden bg-th-bg text-th-text">
+      <main className="flex-1 flex flex-col overflow-hidden bg-th-bg text-th-text relative">
+        {/* Верхний баннер при Demo Mode */}
+        {isDemo && (
+          <div className="shrink-0 px-4 py-1.5 bg-amber-500/10 border-b border-amber-500/20 flex items-center justify-between text-[12px] text-amber-600 dark:text-amber-400 select-none">
+            <div className="flex items-center gap-2 min-w-0 truncate">
+              <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shrink-0" />
+              <span className="truncate">
+                <strong>Demo Mode Active:</strong> Backend is offline. All data is saved in your browser (localStorage).
+              </span>
+            </div>
+            <div className="flex items-center gap-2 shrink-0 ml-3">
+              <button
+                onClick={handleReconnect}
+                disabled={checkingBackend}
+                className="px-2.5 py-0.5 rounded bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-[11px] font-semibold transition-colors cursor-pointer"
+              >
+                {checkingBackend ? 'Checking…' : 'Reconnect to Live API'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Уведомление при проверке статуса */}
+        {toastMessage && (
+          <div className="absolute top-10 right-4 z-50 px-3.5 py-2 rounded-lg bg-th-card border border-th-border shadow-lg text-[12px] text-th-text transition-all animate-fade-in">
+            {toastMessage}
+          </div>
+        )}
+
         <Outlet />
       </main>
     </div>

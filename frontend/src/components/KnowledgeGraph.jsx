@@ -205,7 +205,7 @@ function CreateNoteModal({ onClose, onCreated, canvases, activeCanvasId }) {
       const res = await notesAPI.create({
         title: title.trim(),
         content,
-        folder_id: folderId ? Number(folderId) : undefined,
+        folder_id: folderId ? (isNaN(Number(folderId)) ? folderId : Number(folderId)) : undefined,
       })
       onCreated({ ...res.data, color })
     } catch (err) {

@@ -1,15 +1,15 @@
 /**
- * LoginPage — страница входа и регистрации с полем Name.
- * Поддерживает чистый минималистичный интерфейс.
+ * LoginPage — страница входа и регистрации с возможностью быстрого
+ * перехода в Demo Mode (Offline) при недоступности бэкенда.
  */
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { authAPI } from '../api'
+import { authAPI, isNetworkError } from '../api'
 
 export default function LoginPage() {
-  const { login }  = useAuth()
-  const navigate   = useNavigate()
+  const { login, enterDemoMode } = useAuth()
+  const navigate = useNavigate()
 
   const [mode,     setMode]     = useState('login')
   const [name,     setName]     = useState('')
@@ -29,10 +29,12 @@ export default function LoginPage() {
         try {
           await authAPI.register(email, password, name.trim())
         } catch (regErr) {
-          const detail = regErr.response?.data?.detail
-          setError(typeof detail === 'string' ? detail : 'Registration failed. Try a different email.')
-          setBusy(false)
-          return
+          if (!isNetworkError(regErr)) {
+            const detail = regErr.response?.data?.detail
+            setError(typeof detail === 'string' ? detail : 'Registration failed. Try a different email.')
+            setBusy(false)
+            return
+          }
         }
       }
 
@@ -41,12 +43,23 @@ export default function LoginPage() {
         await login(email, password)
         navigate('/')
       } catch (loginErr) {
-        const detail = loginErr.response?.data?.detail
-        setError(typeof detail === 'string' ? detail : 'Incorrect email or password.')
+        if (isNetworkError(loginErr)) {
+          // Fallback в демо-режим
+          enterDemoMode()
+          navigate('/')
+        } else {
+          const detail = loginErr.response?.data?.detail
+          setError(typeof detail === 'string' ? detail : 'Incorrect email or password.')
+        }
       }
     } finally {
       setBusy(false)
     }
+  }
+
+  const handleDemoClick = () => {
+    enterDemoMode()
+    navigate('/')
   }
 
   const switchMode = () => {
@@ -154,20 +167,34 @@ export default function LoginPage() {
               disabled={busy}
               className="w-full py-2.5 text-[14px] font-semibold bg-th-accent text-white
                          rounded-lg hover:bg-th-accentH disabled:opacity-50 transition-colors mt-2
-                         shadow-sm"
+                         shadow-sm cursor-pointer"
             >
               {busy
-                ? 'Loading…'
+                ? 'Connecting…'
                 : mode === 'login' ? 'Sign in' : 'Create account'}
             </button>
           </form>
 
+          {/* Demo Mode Button */}
+          <div className="mt-4 pt-4 border-t border-th-border/70 text-center">
+            <button
+              type="button"
+              onClick={handleDemoClick}
+              className="w-full py-2 px-3 text-[13px] font-medium text-th-muted hover:text-th-accent
+                         bg-th-hover/60 hover:bg-th-hover rounded-lg border border-th-border transition-all
+                         flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+              <span>Explore in Demo Mode (Offline)</span>
+            </button>
+          </div>
+
           {/* Toggle */}
-          <p className="mt-6 text-center text-[13px] text-th-muted">
+          <p className="mt-5 text-center text-[13px] text-th-muted">
             {mode === 'login' ? "Don't have an account? " : 'Already have an account? '}
             <button
               onClick={switchMode}
-              className="text-th-accent hover:underline font-medium"
+              className="text-th-accent hover:underline font-medium cursor-pointer"
             >
               {mode === 'login' ? 'Sign up' : 'Sign in'}
             </button>

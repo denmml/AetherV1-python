@@ -104,6 +104,7 @@ export default function NotesPage() {
       const note = res.data
       setNotes((prev) => [note, ...prev])
       setActiveNote(note)
+      window.dispatchEvent(new CustomEvent('aether:notes-changed'))
       setTimeout(() => titleRef.current?.focus(), 80)
     } catch { /* silent */ }
   }
@@ -116,6 +117,7 @@ export default function NotesPage() {
         if (activeNote?.id === id) setActiveNote(next[0] || null)
         return next
       })
+      window.dispatchEvent(new CustomEvent('aether:notes-changed'))
     } catch { /* silent */ }
   }
 
@@ -127,6 +129,7 @@ export default function NotesPage() {
     setActiveNote(updated)
     setNotes((prev) => prev.map((n) => (n.id === updated.id ? updated : n)))
     await notesAPI.update(activeNote.id, { title: newTitle })
+    window.dispatchEvent(new CustomEvent('aether:notes-changed'))
   }
 
   const handleTitleKeyDown = (e) => {
